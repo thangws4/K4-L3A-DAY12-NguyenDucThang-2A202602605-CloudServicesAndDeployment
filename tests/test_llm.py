@@ -22,6 +22,7 @@ def settings_with_key(monkeypatch):
         _env_file=None,
         openrouter_api_key="or-test-key",
         openrouter_model="test/model",
+        openrouter_fallback_models=" du-phong/a , du-phong/b ,",
         llm_max_tokens=123,
     )
     monkeypatch.setattr(llm, "get_settings", lambda: settings)
@@ -72,7 +73,9 @@ class TestOpenRouter:
         body = seen["body"]
         assert seen["url"] == OPENROUTER_URL
         assert seen["auth"] == "Bearer or-test-key"
-        assert body["model"] == "test/model"
+        assert body["models"] == ["test/model", "du-phong/a", "du-phong/b"], (
+            "model chính đứng đầu, sau đó tới các model dự phòng"
+        )
         assert body["max_tokens"] == 123
         assert [m["role"] for m in body["messages"]] == ["system", "user", "assistant", "user"]
         assert body["messages"][-1]["content"] == "câu mới"

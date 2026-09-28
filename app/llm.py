@@ -58,8 +58,9 @@ def ask_openrouter(
     messages += [{"role": t["role"], "content": t["content"]} for t in history]
     messages.append({"role": "user", "content": question})
 
+    fallbacks = [m.strip() for m in settings.openrouter_fallback_models.split(",") if m.strip()]
     payload = {
-        "model": settings.openrouter_model,
+        "models": [settings.openrouter_model, *fallbacks],
         "messages": messages,
         "max_tokens": settings.llm_max_tokens,
         "usage": {"include": True},
@@ -76,14 +77,15 @@ def ask_openrouter(
         data = response.json()
         answer = data["choices"][0]["message"]["content"] or ""
     except (httpx.HTTPError, KeyError, IndexError, ValueError) as err:
-        detail = getattr(getattr(err, "response", None), "status_code", None)
+        upstream = getattr(err, "response", None)
         log_event(
             "llm_error",
             level="error",
             provider="openrouter",
             model=settings.openrouter_model,
             error=type(err).__name__,
-            upstream_status=detail,
+            upstream_status=getattr(upstream, "status_code", None),
+            upstream_body=upstream.text[:300] if upstream is not None else None,
         )
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,

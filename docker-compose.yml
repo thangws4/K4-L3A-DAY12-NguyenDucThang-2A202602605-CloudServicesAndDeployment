@@ -51,6 +51,7 @@ services:
       # Để trống → mock LLM
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-4o-mini}
+      OPENROUTER_FALLBACK_MODELS: ${OPENROUTER_FALLBACK_MODELS:-}
     depends_on:
       redis:
         condition: service_healthy

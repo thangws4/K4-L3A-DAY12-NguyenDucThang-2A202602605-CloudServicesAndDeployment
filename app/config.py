@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     # nên test và máy chưa có key vẫn chạy được.
     openrouter_api_key: str | None = None
     openrouter_model: str = "openai/gpt-4o-mini"
+    # Model dự phòng, cách nhau bởi dấu phẩy — OpenRouter tự chuyển sang model
+    # kế tiếp khi model chính lỗi hoặc bị rate limit (hay gặp với model :free)
+    openrouter_fallback_models: str = ""
     llm_max_tokens: int = 800
     llm_timeout_seconds: float = 30.0
 
