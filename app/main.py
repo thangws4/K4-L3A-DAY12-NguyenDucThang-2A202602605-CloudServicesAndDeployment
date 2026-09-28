@@ -95,6 +95,7 @@ class RenameRequest(BaseModel):
 # nhập trên trình duyệt và gửi kèm mỗi request tới /ask.
 # ─────────────────────────────────────────────────────────────
 @app.get("/", include_in_schema=False)
+@app.get("/ask", include_in_schema=False)  # mở /ask trên trình duyệt cũng ra trang chat; POST /ask vẫn là API
 def chat_page():
     return FileResponse(CHAT_PAGE, media_type="text/html")
 

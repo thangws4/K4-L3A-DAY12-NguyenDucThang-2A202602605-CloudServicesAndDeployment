@@ -149,3 +149,10 @@ class TestChatUi:
 
         assert client.delete("/history", headers=auth_headers).status_code == 200
         assert client.get("/history", headers=auth_headers).json()["messages"] == []
+
+    def test_get_ask_mo_trang_chat(self, client):
+        """Mở /ask trên trình duyệt ra giao diện chat; POST /ask vẫn là API cần key."""
+        page = client.get("/ask")
+        assert page.status_code == 200
+        assert page.text == client.get("/").text
+        assert client.post("/ask", json={"question": "hi"}).status_code == 401
