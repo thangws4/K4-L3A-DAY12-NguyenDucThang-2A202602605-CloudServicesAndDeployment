@@ -4,12 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Day 12 Chat</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23c96442' d='M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4v-4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #f5f4ed;
+    --sidebar: #eeece2;
     --surface: #ffffff;
     --text: #141413;
     --muted: #73726c;
@@ -22,6 +24,7 @@
     --code-bg: #efece3;
     --codeblock-bg: #faf9f5;
     --hover: rgba(20, 20, 19, .06);
+    --active: rgba(20, 20, 19, .09);
     --error-bg: #fbeae6;
     --error-text: #a33a22;
     --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.05);
@@ -33,6 +36,7 @@
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #262624;
+      --sidebar: #1f1e1d;
       --surface: #30302e;
       --text: #f5f4ee;
       --muted: #a6a39a;
@@ -45,6 +49,7 @@
       --code-bg: #1f1e1d;
       --codeblock-bg: #1f1e1d;
       --hover: rgba(255, 255, 255, .06);
+      --active: rgba(255, 255, 255, .1);
       --error-bg: #3a2420;
       --error-text: #f0a58f;
       --shadow: 0 1px 2px rgba(0,0,0,.2), 0 4px 16px rgba(0,0,0,.25);
@@ -62,22 +67,8 @@
   }
   button { font: inherit; color: inherit; }
 
-  .app { height: 100%; display: flex; flex-direction: column; }
+  .layout { height: 100%; display: flex; }
 
-  /* ── Thanh trên cùng ─────────────────────────────── */
-  .topbar {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 10px 16px;
-  }
-  .brand {
-    font-family: var(--serif);
-    font-size: 18px;
-    font-weight: 600;
-    margin-right: auto;
-    letter-spacing: -.01em;
-  }
   .icon-btn {
     display: inline-flex;
     align-items: center;
@@ -94,7 +85,168 @@
   .icon-btn:hover { background: var(--hover); color: var(--text); }
   .icon-btn svg { width: 18px; height: 18px; flex: none; }
 
-  /* ── Luồng hội thoại ─────────────────────────────── */
+  /* ── Thanh lịch sử ───────────────────────────────── */
+  .sidebar {
+    width: 272px;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    background: var(--sidebar);
+    border-right: 1px solid var(--border);
+    min-height: 0;
+  }
+  .sb-head { display: flex; align-items: center; padding: 10px 8px 6px 16px; }
+  .brand {
+    font-family: var(--serif);
+    font-size: 18px;
+    font-weight: 600;
+    margin-right: auto;
+    letter-spacing: -.01em;
+  }
+  .new-chat {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 8px 8px;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+  }
+  .new-chat:hover { background: var(--hover); }
+  .new-chat .plus {
+    width: 24px; height: 24px; flex: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--accent-text);
+  }
+  .new-chat .plus svg { width: 14px; height: 14px; }
+
+  .conv-list { flex: 1; overflow-y: auto; padding: 0 8px 12px; min-height: 0; }
+  .group-label { font-size: 12px; color: var(--muted); padding: 14px 10px 4px; font-weight: 500; }
+  .conv-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    border-radius: 8px;
+  }
+  .conv-item:hover { background: var(--hover); }
+  .conv-item.active { background: var(--active); }
+  .conv-open {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    padding: 7px 10px;
+    font-size: 13.5px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .conv-more {
+    flex: none;
+    width: 28px; height: 28px;
+    margin-right: 3px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 0; border-radius: 6px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    opacity: 0;
+  }
+  .conv-item:hover .conv-more, .conv-item.active .conv-more, .conv-more[aria-expanded="true"] { opacity: 1; }
+  .conv-more:hover { background: var(--hover); color: var(--text); }
+  .conv-more svg { width: 16px; height: 16px; }
+  .conv-rename {
+    flex: 1;
+    min-width: 0;
+    margin: 2px;
+    padding: 5px 8px;
+    font: 13.5px var(--sans);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    outline: 0;
+  }
+  .conv-empty { color: var(--muted); font-size: 13px; padding: 12px 10px; }
+
+  .menu {
+    position: fixed;
+    z-index: 30;
+    min-width: 150px;
+    padding: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+  }
+  .menu button {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%;
+    border: 0; background: transparent;
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 13.5px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .menu button:hover { background: var(--hover); }
+  .menu button.danger { color: var(--error-text); }
+  .menu svg { width: 15px; height: 15px; }
+
+  .sb-foot { padding: 8px; border-top: 1px solid var(--border); }
+  .user-btn {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%;
+    padding: 7px 8px;
+    border: 0; border-radius: 10px;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+  }
+  .user-btn:hover { background: var(--hover); }
+  .avatar {
+    width: 30px; height: 30px; flex: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    background: var(--text);
+    color: var(--bg);
+    font-size: 13px; font-weight: 600;
+  }
+  .user-btn .uname { flex: 1; min-width: 0; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .user-btn svg { width: 17px; height: 17px; color: var(--muted); flex: none; }
+
+  .scrim { display: none; }
+
+  body.sidebar-collapsed .sidebar { display: none; }
+  body:not(.sidebar-collapsed) #openSidebar { display: none; }
+
+  /* ── Khu vực chat ────────────────────────────────── */
+  .app { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; }
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 54px;
+    padding: 10px 16px;
+  }
+  .conv-title {
+    font-size: 14.5px;
+    font-weight: 500;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   main { flex: 1; overflow-y: auto; padding: 8px 16px 24px; }
   .thread { max-width: 740px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
 
@@ -317,45 +469,96 @@
   .btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
   .btn.primary:hover { opacity: .88; }
 
+  /* ── Màn hình hẹp: thanh lịch sử thành ngăn kéo ─────── */
+  @media (max-width: 800px) {
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: 20;
+      width: min(290px, 85vw);
+      transform: translateX(-100%);
+      transition: transform .2s ease;
+      box-shadow: var(--shadow);
+    }
+    body.sidebar-collapsed .sidebar { display: flex; }
+    body.sidebar-open .sidebar { transform: none; }
+    body.sidebar-open .scrim {
+      display: block;
+      position: fixed; inset: 0; z-index: 15;
+      background: rgba(0, 0, 0, .35);
+    }
+    #openSidebar { display: inline-flex !important; }
+    #closeSidebar { display: none; }
+    .conv-more { opacity: 1; }
+  }
   @media (max-width: 560px) {
     .topbar { padding: 8px 10px; }
-    .icon-btn .label { display: none; }
     .msg-user .bubble { max-width: 92%; }
     .msg-ai .content { font-size: 16px; }
   }
 </style>
 </head>
 <body>
-<div class="app is-empty" id="app">
-  <header class="topbar">
-    <div class="brand">Day 12 Chat</div>
-    <button class="icon-btn" id="newChat" type="button" title="Cuộc trò chuyện mới">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-      <span class="label">Cuộc trò chuyện mới</span>
+<div class="layout">
+  <aside class="sidebar" id="sidebar" aria-label="Lịch sử trò chuyện">
+    <div class="sb-head">
+      <div class="brand">Day 12 Chat</div>
+      <button class="icon-btn" id="closeSidebar" type="button" title="Thu gọn thanh bên">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16M15 10l-2 2 2 2"/></svg>
+      </button>
+    </div>
+    <button class="new-chat" id="newChat" type="button">
+      <span class="plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+      Cuộc trò chuyện mới
     </button>
-    <button class="icon-btn" id="openSettings" type="button" title="Cài đặt">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      <span class="label">Cài đặt</span>
-    </button>
-  </header>
+    <nav class="conv-list" id="convList"></nav>
+    <div class="sb-foot">
+      <button class="user-btn" id="openSettings" type="button" title="Cài đặt">
+        <span class="avatar" id="avatar">?</span>
+        <span class="uname" id="uname"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim"></div>
 
-  <main id="scroller">
-    <div class="thread" id="thread"></div>
-  </main>
+  <div class="app is-empty" id="app">
+    <header class="topbar">
+      <button class="icon-btn" id="openSidebar" type="button" title="Mở lịch sử trò chuyện">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg>
+      </button>
+      <div class="conv-title" id="convTitle"></div>
+    </header>
 
-  <div class="composer-wrap">
-    <h1 class="greeting" id="greeting"></h1>
-    <form class="composer" id="form">
-      <textarea id="question" rows="1" maxlength="2000" placeholder="Bạn muốn hỏi gì?" title="Enter để gửi, Shift+Enter xuống dòng"></textarea>
-      <div class="composer-row">
-        <span class="model" id="modelLabel"></span>
-        <button class="send" id="send" type="submit" title="Gửi" disabled>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-        </button>
-      </div>
-    </form>
-    <p class="disclaimer">AI có thể trả lời sai. Hãy kiểm tra lại thông tin quan trọng.</p>
+    <main id="scroller">
+      <div class="thread" id="thread"></div>
+    </main>
+
+    <div class="composer-wrap">
+      <h1 class="greeting" id="greeting"></h1>
+      <form class="composer" id="form">
+        <textarea id="question" rows="1" maxlength="2000" placeholder="Bạn muốn hỏi gì?" title="Enter để gửi, Shift+Enter xuống dòng"></textarea>
+        <div class="composer-row">
+          <span class="model" id="modelLabel"></span>
+          <button class="send" id="send" type="submit" title="Gửi" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          </button>
+        </div>
+      </form>
+      <p class="disclaimer">AI có thể trả lời sai. Hãy kiểm tra lại thông tin quan trọng.</p>
+    </div>
   </div>
+</div>
+
+<div class="menu" id="convMenu" role="menu" hidden>
+  <button type="button" data-action="rename" role="menuitem">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+    Đổi tên
+  </button>
+  <button type="button" data-action="delete" class="danger" role="menuitem">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+    Xóa
+  </button>
 </div>
 
 <dialog id="settings">
@@ -369,7 +572,7 @@
     <label class="field">
       <span>User ID</span>
       <input id="userId" autocomplete="off">
-      <small>Mỗi user có lịch sử, rate limit và ngân sách riêng.</small>
+      <small>Mỗi user có danh sách cuộc trò chuyện, rate limit và ngân sách riêng.</small>
     </label>
     <p class="dialog-error" id="settingsError" hidden></p>
     <div class="dialog-actions">
@@ -386,9 +589,12 @@
   const form = $("form"), question = $("question"), send = $("send");
   const dialog = $("settings"), apiKeyInput = $("apiKey"), userInput = $("userId");
   const settingsError = $("settingsError"), modelLabel = $("modelLabel");
+  const convList = $("convList"), convTitle = $("convTitle"), menu = $("convMenu");
+  const narrow = window.matchMedia("(max-width: 800px)");
 
   const ICON_COPY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
   const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+  const ICON_MORE = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>';
 
   // localStorage chỉ để tiện cho người dùng trên máy này; lỗi thì bỏ qua.
   const saved = {
@@ -399,6 +605,9 @@
     apiKey: saved.get("day12.apiKey") || "",
     userId: saved.get("day12.userId") || "web-" + Math.random().toString(36).slice(2, 8),
     busy: false,
+    currentId: null,        // null = cuộc trò chuyện mới, chưa gửi câu nào
+    conversations: [],
+    menuFor: null,
   };
   saved.set("day12.userId", state.userId);
 
@@ -407,6 +616,12 @@
     "X-API-Key": state.apiKey,
     "X-User-Id": state.userId || "anonymous",
   });
+
+  function newConversationId() {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  }
 
   // ── Markdown an toàn: escape trước, rồi mới dựng thẻ ─────────────
   const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -532,7 +747,7 @@
     copy.type = "button";
     copy.title = "Sao chép";
     copy.innerHTML = ICON_COPY;
-    copy.addEventListener("click", () => copyText(text, copy, ICON_COPY));
+    copy.addEventListener("click", () => copyText(text, copy, true));
     actions.appendChild(copy);
     if (info) {
       const meta = document.createElement("span");
@@ -570,24 +785,25 @@
     greet();
   }
 
-  async function copyText(text, button, icon) {
+  async function copyText(text, button, iconOnly) {
     try {
       await navigator.clipboard.writeText(text);
       const old = button.innerHTML;
-      button.innerHTML = icon ? ICON_CHECK : "Đã chép";
+      button.innerHTML = iconOnly ? ICON_CHECK : "Đã chép";
       setTimeout(() => { button.innerHTML = old; }, 1500);
     } catch { /* clipboard bị chặn — bỏ qua */ }
   }
 
   thread.addEventListener("click", (e) => {
     const btn = e.target.closest(".copy-code");
-    if (btn) copyText(btn.closest(".codeblock").querySelector("code").textContent, btn);
+    if (btn) copyText(btn.closest(".codeblock").querySelector("code").textContent, btn, false);
   });
 
   function errorText(status, retryAfter) {
     switch (status) {
       case 401: return "API key sai hoặc chưa nhập — mở Cài đặt để nhập lại.";
       case 402: return "User này đã hết ngân sách tháng.";
+      case 404: return "Không tìm thấy cuộc trò chuyện (có thể đã bị xóa).";
       case 422: return "Câu hỏi không hợp lệ (rỗng hoặc quá 2000 ký tự).";
       case 429: return `Bạn gửi hơi nhanh — thử lại sau ${retryAfter || 60} giây.`;
       case 502: return "Nhà cung cấp LLM đang bận, thử lại sau ít phút.";
@@ -599,26 +815,201 @@
   const formatInfo = (d) =>
     `${d.model || "mock"} · ${d.tokens.in}→${d.tokens.out} tokens · $${Number(d.cost_usd).toFixed(6)}`;
 
-  // ── Gọi API ─────────────────────────────────────────────────────
-  async function loadHistory() {
-    clearThread();
-    if (!state.apiKey) return;
+  // ── Thanh lịch sử ───────────────────────────────────────────────
+  function groupLabel(updatedAt) {
+    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+    const t = updatedAt * 1000, day = 86400000;
+    if (t >= startOfToday.getTime()) return "Hôm nay";
+    if (t >= startOfToday.getTime() - day) return "Hôm qua";
+    if (t >= startOfToday.getTime() - 7 * day) return "7 ngày qua";
+    if (t >= startOfToday.getTime() - 30 * day) return "30 ngày qua";
+    return "Cũ hơn";
+  }
+
+  function renderSidebar() {
+    closeMenu();
+    convList.replaceChildren();
+    if (!state.conversations.length) {
+      const empty = document.createElement("div");
+      empty.className = "conv-empty";
+      empty.textContent = state.apiKey ? "Chưa có cuộc trò chuyện nào." : "Nhập API key trong Cài đặt để xem lịch sử.";
+      convList.appendChild(empty);
+      return;
+    }
+    let lastGroup = null;
+    for (const conv of state.conversations) {
+      const group = groupLabel(conv.updated_at);
+      if (group !== lastGroup) {
+        const label = document.createElement("div");
+        label.className = "group-label";
+        label.textContent = group;
+        convList.appendChild(label);
+        lastGroup = group;
+      }
+      const item = document.createElement("div");
+      item.className = "conv-item" + (conv.id === state.currentId ? " active" : "");
+      item.dataset.id = conv.id;
+      const open = document.createElement("button");
+      open.type = "button";
+      open.className = "conv-open";
+      open.textContent = conv.title;
+      open.title = conv.title;
+      open.addEventListener("click", () => openConversation(conv.id));
+      const more = document.createElement("button");
+      more.type = "button";
+      more.className = "conv-more";
+      more.title = "Tùy chọn";
+      more.setAttribute("aria-haspopup", "menu");
+      more.setAttribute("aria-expanded", "false");
+      more.innerHTML = ICON_MORE;
+      more.addEventListener("click", (e) => { e.stopPropagation(); toggleMenu(conv.id, more); });
+      item.append(open, more);
+      convList.appendChild(item);
+    }
+  }
+
+  function setTitle() {
+    const conv = state.conversations.find((c) => c.id === state.currentId);
+    convTitle.textContent = conv ? conv.title : "";
+    document.title = conv ? `${conv.title} · Day 12 Chat` : "Day 12 Chat";
+  }
+
+  async function loadConversations() {
+    if (!state.apiKey) { state.conversations = []; renderSidebar(); return; }
     try {
-      const res = await fetch("/history", { headers: headers() });
+      const res = await fetch("/conversations", { headers: headers() });
       if (res.status === 401) { openSettings("API key không đúng."); return; }
       if (!res.ok) return;
+      state.conversations = (await res.json()).conversations;
+      renderSidebar();
+      setTitle();
+    } catch { /* mạng lỗi — giữ danh sách cũ */ }
+  }
+
+  function toggleMenu(id, anchor) {
+    if (state.menuFor === id) { closeMenu(); return; }
+    closeMenu();
+    state.menuFor = id;
+    anchor.setAttribute("aria-expanded", "true");
+    const r = anchor.getBoundingClientRect();
+    menu.hidden = false;
+    menu.style.top = `${Math.min(r.bottom + 4, window.innerHeight - menu.offsetHeight - 8)}px`;
+    menu.style.left = `${Math.min(r.left, window.innerWidth - menu.offsetWidth - 8)}px`;
+  }
+
+  function closeMenu() {
+    menu.hidden = true;
+    state.menuFor = null;
+    convList.querySelectorAll('.conv-more[aria-expanded="true"]').forEach((b) => b.setAttribute("aria-expanded", "false"));
+  }
+
+  document.addEventListener("click", (e) => { if (!menu.hidden && !menu.contains(e.target)) closeMenu(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenu(); });
+
+  menu.addEventListener("click", (e) => {
+    const action = e.target.closest("button")?.dataset.action;
+    const id = state.menuFor;
+    closeMenu();
+    if (action === "rename") startRename(id);
+    if (action === "delete") deleteConversation(id);
+  });
+
+  function startRename(id) {
+    const item = convList.querySelector(`.conv-item[data-id="${id}"]`);
+    const conv = state.conversations.find((c) => c.id === id);
+    if (!item || !conv) return;
+    const input = document.createElement("input");
+    input.className = "conv-rename";
+    input.value = conv.title;
+    input.maxLength = 200;
+    item.replaceChildren(input);
+    input.focus();
+    input.select();
+    let done = false;
+    const finish = async (commit) => {
+      if (done) return;
+      done = true;
+      const title = input.value.trim();
+      if (commit && title && title !== conv.title) {
+        try {
+          const res = await fetch(`/conversations/${id}`, { method: "PATCH", headers: headers(), body: JSON.stringify({ title }) });
+          if (res.ok) conv.title = (await res.json()).title;
+        } catch { /* giữ tên cũ */ }
+      }
+      renderSidebar();
+      setTitle();
+    };
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); finish(true); }
+      if (e.key === "Escape") { e.preventDefault(); finish(false); }
+    });
+    input.addEventListener("blur", () => finish(true));
+  }
+
+  async function deleteConversation(id) {
+    const conv = state.conversations.find((c) => c.id === id);
+    if (!conv || !confirm(`Xóa cuộc trò chuyện "${conv.title}"?`)) return;
+    try {
+      const res = await fetch(`/conversations/${id}`, { method: "DELETE", headers: headers() });
+      if (!res.ok && res.status !== 404) { addNotice(errorText(res.status)); return; }
+    } catch { addNotice("Không kết nối được tới service."); return; }
+    state.conversations = state.conversations.filter((c) => c.id !== id);
+    if (state.currentId === id) startNewChat();
+    renderSidebar();
+  }
+
+  // ── Mở / tạo cuộc trò chuyện ────────────────────────────────────
+  // #c=<id> trên URL để refresh trang vẫn mở đúng cuộc trò chuyện
+  function setHash(id) {
+    history.replaceState(null, "", id ? `#c=${id}` : location.pathname + location.search);
+  }
+  const hashId = () => (location.hash.match(/^#c=([A-Za-z0-9_-]{8,64})$/) || [])[1] || null;
+
+  function startNewChat() {
+    state.currentId = null;
+    modelLabel.textContent = "";
+    setHash(null);
+    clearThread();
+    renderSidebar();
+    setTitle();
+    closeDrawer();
+    question.focus();
+  }
+
+  async function openConversation(id) {
+    closeDrawer();
+    if (id === state.currentId && thread.childElementCount) return;
+    state.currentId = id;
+    setHash(id);
+    modelLabel.textContent = "";
+    clearThread();
+    renderSidebar();
+    setTitle();
+    try {
+      const res = await fetch(`/conversations/${id}`, { headers: headers() });
+      if (state.currentId !== id) return;          // người dùng đã chuyển cuộc khác
+      if (res.status === 404) { startNewChat(); return; }
+      if (!res.ok) { addNotice(errorText(res.status)); return; }
       const data = await res.json();
       data.messages.forEach((m) => (m.role === "user" ? addUser(m.content) : addAssistant(m.content)));
-    } catch { /* mạng lỗi — để màn hình trống */ }
+    } catch { addNotice("Không kết nối được tới service."); }
   }
 
   async function ask(text) {
+    if (!state.currentId) {
+      state.currentId = newConversationId();
+    }
+    const id = state.currentId;
     addUser(text);
     const thinking = addThinking();
     state.busy = true;
     updateSend();
     try {
-      const res = await fetch("/ask", { method: "POST", headers: headers(), body: JSON.stringify({ question: text }) });
+      const res = await fetch("/ask", {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ question: text, conversation_id: id }),
+      });
       thinking.remove();
       if (!res.ok) {
         addNotice(errorText(res.status, res.headers.get("Retry-After")));
@@ -626,8 +1017,12 @@
         return;
       }
       const data = await res.json();
-      addAssistant(data.answer, formatInfo(data));
-      modelLabel.textContent = data.model || "";
+      if (state.currentId === id) {
+        addAssistant(data.answer, formatInfo(data));
+        modelLabel.textContent = data.model || "";
+        setHash(id);
+      }
+      loadConversations();
     } catch {
       thinking.remove();
       addNotice("Không kết nối được tới service.");
@@ -656,40 +1051,60 @@
   });
   question.addEventListener("input", () => { autosize(); updateSend(); });
 
-  // ── Cài đặt & cuộc trò chuyện mới ───────────────────────────────
+  // ── Thanh bên: thu gọn (desktop) / ngăn kéo (mobile) ─────────────
+  function closeDrawer() { document.body.classList.remove("sidebar-open"); }
+  $("openSidebar").addEventListener("click", () => {
+    if (narrow.matches) { document.body.classList.add("sidebar-open"); return; }
+    document.body.classList.remove("sidebar-collapsed");
+    saved.set("day12.sidebar", "open");
+  });
+  $("closeSidebar").addEventListener("click", () => {
+    document.body.classList.add("sidebar-collapsed");
+    saved.set("day12.sidebar", "collapsed");
+  });
+  $("scrim").addEventListener("click", closeDrawer);
+  if (saved.get("day12.sidebar") === "collapsed") document.body.classList.add("sidebar-collapsed");
+
+  $("newChat").addEventListener("click", startNewChat);
+
+  // ── Cài đặt ─────────────────────────────────────────────────────
+  function renderUser() {
+    $("uname").textContent = state.userId;
+    $("avatar").textContent = (state.userId.replace(/^web-/, "")[0] || "?").toUpperCase();
+  }
+
   function openSettings(error) {
     apiKeyInput.value = state.apiKey;
     userInput.value = state.userId;
     settingsError.hidden = !error;
     settingsError.textContent = error || "";
+    closeDrawer();
     if (!dialog.open) dialog.showModal();
     (state.apiKey ? userInput : apiKeyInput).focus();
   }
   $("openSettings").addEventListener("click", () => openSettings());
-  dialog.addEventListener("close", () => {
+  dialog.addEventListener("close", async () => {
     if (dialog.returnValue !== "save") return;
     state.apiKey = apiKeyInput.value.trim();
     state.userId = userInput.value.trim() || state.userId;
     saved.set("day12.apiKey", state.apiKey);
     saved.set("day12.userId", state.userId);
-    loadHistory();
+    renderUser();
+    startNewChat();
+    await loadConversations();
   });
 
-  $("newChat").addEventListener("click", async () => {
-    if (state.apiKey) {
-      try {
-        const res = await fetch("/history", { method: "DELETE", headers: headers() });
-        if (!res.ok) { addNotice(errorText(res.status)); return; }
-      } catch { addNotice("Không kết nối được tới service."); return; }
-    }
-    modelLabel.textContent = "";
-    clearThread();
+  // ── Khởi động ───────────────────────────────────────────────────
+  (async () => {
+    renderUser();
+    greet();
+    renderSidebar();
+    if (!state.apiKey) { openSettings(); return; }
+    await loadConversations();
+    const id = hashId();
+    if (id) openConversation(id);
     question.focus();
-  });
-
-  greet();
-  if (state.apiKey) loadHistory(); else openSettings();
-  question.focus();
+  })();
 })();
 </script>
 </body>
