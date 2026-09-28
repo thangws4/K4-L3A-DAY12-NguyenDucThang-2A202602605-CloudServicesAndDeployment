@@ -21,14 +21,37 @@
 #            docker images day12-agent:prod     # xem dung lượng
 # ═══════════════════════════════════════════════════════════════════
 
-FROM python:3.11
+# ── Stage 1: builder — cài dependency vào một venv riêng ─────────────
+FROM python:3.11-slim AS builder
+
+ENV PIP_NO_CACHE_DIR=1     PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Chỉ copy requirements.txt trước để layer pip install được cache
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+# ── Stage 2: runtime — chỉ mang venv + source, không có công cụ build ─
+FROM python:3.11-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1     PYTHONUNBUFFERED=1     PATH="/opt/venv/bin:$PATH"     PORT=8000
+
+RUN groupadd --system app && useradd --system --gid app --no-create-home app
 
 WORKDIR /app
 
-COPY . .
+COPY --from=builder /opt/venv /opt/venv
+COPY --chown=app:app app/ ./app/
+COPY --chown=app:app utils/ ./utils/
 
-RUN pip install -r requirements.txt
+USER app
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# slim không có curl → dùng Python gọi /health
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3     CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ.get('PORT', '8000') + '/health', timeout=3)" || exit 1
+
+# Shell form để $PORT được nội suy; exec để uvicorn là PID 1 và nhận SIGTERM
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
