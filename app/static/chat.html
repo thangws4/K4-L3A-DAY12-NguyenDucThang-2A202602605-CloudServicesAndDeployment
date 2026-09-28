@@ -4,216 +4,559 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Day 12 Chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f6f7f9;
-    --panel: #ffffff;
-    --text: #1c1f24;
-    --muted: #6b7280;
-    --border: #e3e6ea;
-    --accent: #2563eb;
+    --bg: #f5f4ed;
+    --surface: #ffffff;
+    --text: #141413;
+    --muted: #73726c;
+    --border: #e3e1d7;
+    --border-strong: #d4d1c4;
+    --user-bubble: #e8e5da;
+    --accent: #c96442;
+    --accent-hover: #b4583a;
     --accent-text: #ffffff;
-    --user-bg: #2563eb;
-    --user-text: #ffffff;
-    --bot-bg: #ffffff;
-    --code-bg: #f1f3f5;
-    --error-bg: #fef2f2;
-    --error-text: #b91c1c;
+    --code-bg: #efece3;
+    --codeblock-bg: #faf9f5;
+    --hover: rgba(20, 20, 19, .06);
+    --error-bg: #fbeae6;
+    --error-text: #a33a22;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.05);
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #111316;
-      --panel: #1a1d21;
-      --text: #e7e9ec;
-      --muted: #9aa1ab;
-      --border: #2b2f35;
-      --accent: #3b82f6;
-      --user-bg: #2f5fd0;
-      --bot-bg: #1f2328;
-      --code-bg: #262a30;
-      --error-bg: #2a1718;
-      --error-text: #fca5a5;
+      --bg: #262624;
+      --surface: #30302e;
+      --text: #f5f4ee;
+      --muted: #a6a39a;
+      --border: #3d3d3a;
+      --border-strong: #4a4a46;
+      --user-bubble: #141413;
+      --accent: #d97757;
+      --accent-hover: #e0876a;
+      --accent-text: #ffffff;
+      --code-bg: #1f1e1d;
+      --codeblock-bg: #1f1e1d;
+      --hover: rgba(255, 255, 255, .06);
+      --error-bg: #3a2420;
+      --error-text: #f0a58f;
+      --shadow: 0 1px 2px rgba(0,0,0,.2), 0 4px 16px rgba(0,0,0,.25);
+      color-scheme: dark;
     }
   }
+
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
   body {
     background: var(--bg);
     color: var(--text);
-    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    display: flex;
-    flex-direction: column;
+    font: 15px/1.5 var(--sans);
+    -webkit-font-smoothing: antialiased;
   }
-  header {
-    background: var(--panel);
-    border-bottom: 1px solid var(--border);
-    padding: 10px 16px;
+  button { font: inherit; color: inherit; }
+
+  .app { height: 100%; display: flex; flex-direction: column; }
+
+  /* ── Thanh trên cùng ─────────────────────────────── */
+  .topbar {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px 12px;
     align-items: center;
+    gap: 4px;
+    padding: 10px 16px;
   }
-  header h1 { font-size: 16px; margin: 0 auto 0 0; }
-  header label { font-size: 13px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
-  header input {
-    font: inherit; font-size: 13px;
-    padding: 5px 8px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--bg);
-    color: var(--text);
-    width: 160px;
+  .brand {
+    font-family: var(--serif);
+    font-size: 18px;
+    font-weight: 600;
+    margin-right: auto;
+    letter-spacing: -.01em;
   }
-  button {
-    font: inherit; font-size: 13px;
-    padding: 6px 12px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: var(--panel);
-    color: var(--text);
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
     cursor: pointer;
+    font-size: 13.5px;
   }
-  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
-  button:disabled { opacity: .5; cursor: default; }
-  main {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px;
-  }
-  .thread { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
-  .msg { display: flex; flex-direction: column; max-width: 85%; }
-  .msg.user { align-self: flex-end; align-items: flex-end; }
-  .msg.assistant { align-self: flex-start; }
-  .bubble {
-    padding: 9px 13px;
-    border-radius: 12px;
+  .icon-btn:hover { background: var(--hover); color: var(--text); }
+  .icon-btn svg { width: 18px; height: 18px; flex: none; }
+
+  /* ── Luồng hội thoại ─────────────────────────────── */
+  main { flex: 1; overflow-y: auto; padding: 8px 16px 24px; }
+  .thread { max-width: 740px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+
+  .msg-user { display: flex; justify-content: flex-end; }
+  .msg-user .bubble {
+    max-width: 85%;
+    background: var(--user-bubble);
+    padding: 10px 16px;
+    border-radius: 18px;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+    font-size: 15.5px;
   }
-  .user .bubble { background: var(--user-bg); color: var(--user-text); border-bottom-right-radius: 4px; }
-  .assistant .bubble { background: var(--bot-bg); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
-  .bubble pre { background: var(--code-bg); padding: 8px 10px; border-radius: 6px; overflow-x: auto; white-space: pre; margin: 6px 0; }
-  .bubble code { background: var(--code-bg); padding: 1px 4px; border-radius: 4px; font-size: 13px; }
-  .bubble pre code { background: none; padding: 0; }
-  .meta { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+
+  .msg-ai .content {
+    font-family: var(--serif);
+    font-size: 16.5px;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+  }
+  .content > :first-child { margin-top: 0; }
+  .content > :last-child { margin-bottom: 0; }
+  .content p { margin: 0 0 .9em; }
+  .content h2, .content h3, .content h4, .content h5 {
+    font-family: var(--serif);
+    font-weight: 600;
+    line-height: 1.35;
+    margin: 1.3em 0 .5em;
+  }
+  .content h2 { font-size: 1.35em; }
+  .content h3 { font-size: 1.2em; }
+  .content h4, .content h5 { font-size: 1.05em; }
+  .content ul, .content ol { margin: 0 0 .9em; padding-left: 1.5em; }
+  .content li { margin: .3em 0; padding-left: .2em; }
+  .content strong { font-weight: 600; }
+  .content a { color: var(--accent); text-underline-offset: 2px; }
+  .content blockquote {
+    margin: 0 0 .9em;
+    padding: 2px 0 2px 14px;
+    border-left: 3px solid var(--border-strong);
+    color: var(--muted);
+  }
+  .content hr { border: 0; border-top: 1px solid var(--border); margin: 1.4em 0; }
+  .content code {
+    font-family: var(--mono);
+    font-size: .84em;
+    background: var(--code-bg);
+    padding: .15em .4em;
+    border-radius: 5px;
+  }
+  .content .table-wrap { overflow-x: auto; margin: 0 0 .9em; }
+  .content table { border-collapse: collapse; font-size: .94em; min-width: 50%; }
+  .content th, .content td { border: 1px solid var(--border); padding: 6px 12px; text-align: left; vertical-align: top; }
+  .content th { font-weight: 600; background: var(--code-bg); }
+
+  .codeblock {
+    margin: 0 0 .9em;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--codeblock-bg);
+    overflow: hidden;
+    font-family: var(--sans);
+  }
+  .codebar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px 6px 14px;
+    font-size: 12.5px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  .codebar button {
+    border: 0; background: transparent; color: var(--muted);
+    font-size: 12.5px; padding: 3px 8px; border-radius: 6px; cursor: pointer;
+  }
+  .codebar button:hover { background: var(--hover); color: var(--text); }
+  .codeblock pre { margin: 0; padding: 12px 14px; overflow-x: auto; font-size: 13.5px; line-height: 1.55; }
+  .codeblock code { background: none; padding: 0; font-size: inherit; }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 12.5px;
+  }
+  .actions .icon-btn { height: 28px; padding: 0 6px; }
+  .actions .icon-btn svg { width: 16px; height: 16px; }
+  .actions .meta { margin-left: 6px; }
+
+  .thinking { display: flex; gap: 5px; padding: 8px 0; }
+  .thinking span {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 1.2s infinite ease-in-out;
+  }
+  .thinking span:nth-child(2) { animation-delay: .15s; }
+  .thinking span:nth-child(3) { animation-delay: .3s; }
+  @keyframes pulse {
+    0%, 80%, 100% { opacity: .25; transform: scale(.8); }
+    40% { opacity: 1; transform: scale(1); }
+  }
+
   .notice {
     align-self: center;
-    font-size: 13px;
-    padding: 6px 12px;
-    border-radius: 6px;
+    font-size: 13.5px;
+    padding: 8px 14px;
+    border-radius: 10px;
     background: var(--error-bg);
     color: var(--error-text);
   }
-  .empty { text-align: center; color: var(--muted); margin-top: 18vh; }
-  .typing .bubble { color: var(--muted); }
-  footer {
-    background: var(--panel);
-    border-top: 1px solid var(--border);
-    padding: 10px 16px;
+
+  /* ── Ô nhập ──────────────────────────────────────── */
+  .composer-wrap { padding: 0 16px 12px; }
+  .greeting {
+    display: none;
+    text-align: center;
+    font-family: var(--serif);
+    font-size: clamp(28px, 5vw, 40px);
+    font-weight: 400;
+    letter-spacing: -.02em;
+    margin: 0 0 28px;
   }
-  form { max-width: 760px; margin: 0 auto; display: flex; gap: 8px; align-items: flex-end; }
-  textarea {
-    flex: 1;
-    min-width: 0;
-    font: inherit;
-    resize: none;
-    padding: 9px 12px;
+  .composer {
+    width: 100%;
+    max-width: 740px;
+    margin: 0 auto;
+    background: var(--surface);
     border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    padding: 14px 14px 10px 18px;
+    transition: border-color .15s;
+  }
+  .composer:focus-within { border-color: var(--border-strong); }
+  .composer textarea {
+    display: block;
+    width: 100%;
+    min-height: 26px;
+    max-height: 220px;
+    border: 0;
+    outline: 0;
+    resize: none;
+    background: transparent;
+    color: var(--text);
+    font: 16px/1.55 var(--sans);
+    padding: 0;
+  }
+  .composer textarea::placeholder { color: var(--muted); }
+  .composer-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  .composer-row .model {
+    margin-left: auto;
+    font-size: 12.5px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .send {
+    flex: none;
+    width: 34px; height: 34px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 0; border-radius: 10px;
+    background: var(--accent);
+    color: var(--accent-text);
+    cursor: pointer;
+    transition: background .15s, opacity .15s;
+  }
+  .send:hover:not(:disabled) { background: var(--accent-hover); }
+  .send:disabled { opacity: .4; cursor: default; }
+  .send svg { width: 18px; height: 18px; }
+  .disclaimer { text-align: center; font-size: 12px; color: var(--muted); margin: 10px 0 0; }
+
+  /* Màn hình trống: lời chào + ô nhập nằm giữa */
+  .app.is-empty main { display: none; }
+  .app.is-empty .composer-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; padding-bottom: 12vh; }
+  .app.is-empty .greeting { display: block; }
+  .app.is-empty .disclaimer { visibility: hidden; }
+
+  /* ── Hộp thoại cài đặt ───────────────────────────── */
+  dialog {
+    width: min(440px, calc(100vw - 32px));
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px;
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
+  }
+  dialog::backdrop { background: rgba(0, 0, 0, .35); }
+  dialog h2 { font-family: var(--serif); font-weight: 600; font-size: 20px; margin: 0 0 4px; }
+  dialog .sub { color: var(--muted); font-size: 13.5px; margin: 0 0 18px; }
+  .field { display: block; margin-bottom: 14px; }
+  .field span { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+  .field small { display: block; color: var(--muted); font-size: 12px; margin-top: 5px; }
+  .field input {
+    width: 100%;
+    font: 14px var(--sans);
+    padding: 9px 12px;
+    border: 1px solid var(--border-strong);
     border-radius: 10px;
     background: var(--bg);
     color: var(--text);
-    max-height: 160px;
   }
-  textarea:focus, header input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .field input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+  .dialog-error { color: var(--error-text); font-size: 13px; margin: -4px 0 12px; }
+  .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+  .btn {
+    border: 1px solid var(--border-strong);
+    background: transparent;
+    padding: 8px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .btn:hover { background: var(--hover); }
+  .btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .btn.primary:hover { opacity: .88; }
+
   @media (max-width: 560px) {
-    header h1 { flex-basis: 100%; }
-    header label { flex: 1 1 0; min-width: 0; }
-    header input { width: 100%; min-width: 0; }
-    .msg { max-width: 95%; }
+    .topbar { padding: 8px 10px; }
+    .icon-btn .label { display: none; }
+    .msg-user .bubble { max-width: 92%; }
+    .msg-ai .content { font-size: 16px; }
   }
 </style>
 </head>
 <body>
-<header>
-  <h1>Day 12 Chat</h1>
-  <label>API key <input id="apiKey" type="password" autocomplete="off" placeholder="X-API-Key"></label>
-  <label>User <input id="userId" autocomplete="off"></label>
-  <button id="newChat" type="button">Cuộc trò chuyện mới</button>
-</header>
+<div class="app is-empty" id="app">
+  <header class="topbar">
+    <div class="brand">Day 12 Chat</div>
+    <button class="icon-btn" id="newChat" type="button" title="Cuộc trò chuyện mới">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      <span class="label">Cuộc trò chuyện mới</span>
+    </button>
+    <button class="icon-btn" id="openSettings" type="button" title="Cài đặt">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span class="label">Cài đặt</span>
+    </button>
+  </header>
 
-<main id="scroller">
-  <div class="thread" id="thread">
-    <p class="empty" id="empty">Nhập API key của service rồi bắt đầu hỏi.</p>
+  <main id="scroller">
+    <div class="thread" id="thread"></div>
+  </main>
+
+  <div class="composer-wrap">
+    <h1 class="greeting" id="greeting"></h1>
+    <form class="composer" id="form">
+      <textarea id="question" rows="1" maxlength="2000" placeholder="Bạn muốn hỏi gì?" title="Enter để gửi, Shift+Enter xuống dòng"></textarea>
+      <div class="composer-row">
+        <span class="model" id="modelLabel"></span>
+        <button class="send" id="send" type="submit" title="Gửi" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        </button>
+      </div>
+    </form>
+    <p class="disclaimer">AI có thể trả lời sai. Hãy kiểm tra lại thông tin quan trọng.</p>
   </div>
-</main>
+</div>
 
-<footer>
-  <form id="form">
-    <textarea id="question" rows="1" maxlength="2000" placeholder="Nhập câu hỏi…" title="Enter để gửi, Shift+Enter xuống dòng"></textarea>
-    <button class="primary" id="send" type="submit">Gửi</button>
+<dialog id="settings">
+  <form method="dialog" id="settingsForm">
+    <h2>Cài đặt</h2>
+    <p class="sub">Khóa được lưu trong trình duyệt này, gửi kèm mỗi câu hỏi qua header <code>X-API-Key</code>.</p>
+    <label class="field">
+      <span>API key của service</span>
+      <input id="apiKey" type="password" autocomplete="off" placeholder="Giá trị AGENT_API_KEY">
+    </label>
+    <label class="field">
+      <span>User ID</span>
+      <input id="userId" autocomplete="off">
+      <small>Mỗi user có lịch sử, rate limit và ngân sách riêng.</small>
+    </label>
+    <p class="dialog-error" id="settingsError" hidden></p>
+    <div class="dialog-actions">
+      <button class="btn" value="cancel" type="submit" formnovalidate>Hủy</button>
+      <button class="btn primary" value="save" type="submit">Lưu</button>
+    </div>
   </form>
-</footer>
+</dialog>
 
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  const thread = $("thread"), scroller = $("scroller"), empty = $("empty");
-  const apiKeyInput = $("apiKey"), userInput = $("userId");
+  const app = $("app"), thread = $("thread"), scroller = $("scroller");
   const form = $("form"), question = $("question"), send = $("send");
+  const dialog = $("settings"), apiKeyInput = $("apiKey"), userInput = $("userId");
+  const settingsError = $("settingsError"), modelLabel = $("modelLabel");
 
-  // localStorage chỉ để tiện cho người xem trên máy này; lỗi thì bỏ qua.
-  const store = {
+  const ICON_COPY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+  const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+
+  // localStorage chỉ để tiện cho người dùng trên máy này; lỗi thì bỏ qua.
+  const saved = {
     get(k) { try { return localStorage.getItem(k); } catch { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch {} },
   };
-
-  apiKeyInput.value = store.get("day12.apiKey") || "";
-  userInput.value = store.get("day12.userId") || "web-" + Math.random().toString(36).slice(2, 8);
-  store.set("day12.userId", userInput.value);
+  const state = {
+    apiKey: saved.get("day12.apiKey") || "",
+    userId: saved.get("day12.userId") || "web-" + Math.random().toString(36).slice(2, 8),
+    busy: false,
+  };
+  saved.set("day12.userId", state.userId);
 
   const headers = () => ({
     "Content-Type": "application/json",
-    "X-API-Key": apiKeyInput.value.trim(),
-    "X-User-Id": userInput.value.trim() || "anonymous",
+    "X-API-Key": state.apiKey,
+    "X-User-Id": state.userId || "anonymous",
   });
 
-  function escapeHtml(s) {
-    return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  // ── Markdown an toàn: escape trước, rồi mới dựng thẻ ─────────────
+  const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  function inline(s) {
+    const codes = [];
+    s = s.replace(/`([^`\n]+)`/g, (_, c) => { codes.push(c); return `\u0000${codes.length - 1}\u0000`; });
+    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    s = s.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
+    s = s.replace(/(^|[^*\w])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>");
+    return s.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${codes[i]}</code>`);
   }
 
-  // Markdown tối giản: code block, inline code, in đậm. Escape trước để an toàn.
-  function render(text) {
-    const parts = escapeHtml(text).split(/```(?:[\w-]*)\n?([\s\S]*?)```/g);
-    return parts.map((part, i) => {
-      if (i % 2 === 1) return "<pre><code>" + part.replace(/\n$/, "") + "</code></pre>";
-      return part
-        .replace(/`([^`\n]+)`/g, "<code>$1</code>")
-        .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
-    }).join("");
+  const RE = {
+    heading: /^(#{1,6})\s+(.*)$/,
+    hr: /^\s*([-*_])(\s*\1){2,}\s*$/,
+    quote: /^&gt;\s?/,
+    list: /^(\s*)([-*+]|\d+[.)])\s+(.*)$/,
+    tableRow: /^\s*\|.*\|\s*$/,
+    tableSep: /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/,
+  };
+  const isBlockStart = (line, next) =>
+    RE.heading.test(line) || RE.hr.test(line) || RE.quote.test(line) || RE.list.test(line) ||
+    (RE.tableRow.test(line) && next !== undefined && RE.tableSep.test(next));
+  const cells = (row) => row.trim().replace(/^\||\|$/g, "").split("|").map((c) => inline(c.trim()));
+
+  function blocks(text) {
+    const lines = text.split("\n");
+    let html = "", i = 0;
+    while (i < lines.length) {
+      const line = lines[i];
+      let m;
+      if (!line.trim()) { i++; continue; }
+      if ((m = line.match(RE.heading))) {
+        const level = Math.min(m[1].length + 1, 5);
+        html += `<h${level}>${inline(m[2])}</h${level}>`; i++; continue;
+      }
+      if (RE.hr.test(line)) { html += "<hr>"; i++; continue; }
+      if (RE.quote.test(line)) {
+        const inner = [];
+        while (i < lines.length && RE.quote.test(lines[i])) inner.push(lines[i++].replace(RE.quote, ""));
+        html += `<blockquote>${blocks(inner.join("\n"))}</blockquote>`; continue;
+      }
+      if (RE.tableRow.test(line) && RE.tableSep.test(lines[i + 1] || "")) {
+        const head = cells(line); i += 2;
+        let body = "";
+        while (i < lines.length && RE.tableRow.test(lines[i])) body += `<tr>${cells(lines[i++]).map((c) => `<td>${c}</td>`).join("")}</tr>`;
+        html += `<div class="table-wrap"><table><thead><tr>${head.map((c) => `<th>${c}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table></div>`;
+        continue;
+      }
+      if ((m = line.match(RE.list))) {
+        const ordered = /\d/.test(m[2]);
+        const start = ordered ? parseInt(m[2], 10) : 1;
+        let items = "";
+        while (i < lines.length) {
+          const lm = lines[i].match(RE.list);
+          if (lm && /\d/.test(lm[2]) === ordered) {
+            const depth = Math.floor(lm[1].replace(/\t/g, "  ").length / 2);
+            items += `<li${depth ? ` style="margin-left:${depth * 1.25}em"` : ""}>${inline(lm[3])}</li>`;
+            i++;
+          } else if (lm) {
+            break;
+          } else if (lines[i].trim() && /^\s{2,}/.test(lines[i])) {
+            items = items.replace(/<\/li>$/, `<br>${inline(lines[i].trim())}</li>`); i++;
+          } else break;
+        }
+        html += ordered ? `<ol${start !== 1 ? ` start="${start}"` : ""}>${items}</ol>` : `<ul>${items}</ul>`;
+        continue;
+      }
+      const para = [];
+      while (i < lines.length && lines[i].trim() && !(para.length && isBlockStart(lines[i], lines[i + 1]))) para.push(lines[i++]);
+      html += `<p>${para.map(inline).join("<br>")}</p>`;
+    }
+    return html;
   }
 
-  function scrollDown() { scroller.scrollTop = scroller.scrollHeight; }
+  function renderMarkdown(src) {
+    const parts = src.split(/```([\w+#.-]*)[^\n]*\n?([\s\S]*?)(?:```|$)/g);
+    let html = "";
+    for (let i = 0; i < parts.length; i += 3) {
+      html += blocks(esc(parts[i]));
+      if (i + 2 < parts.length) {
+        const lang = parts[i + 1] || "code";
+        const code = parts[i + 2].replace(/\n$/, "");
+        html += `<div class="codeblock"><div class="codebar"><span>${esc(lang)}</span><button type="button" class="copy-code">Sao chép</button></div><pre><code>${esc(code)}</code></pre></div>`;
+      }
+    }
+    return html;
+  }
 
-  function addMessage(role, text, meta) {
-    empty.hidden = true;
-    const wrap = document.createElement("div");
-    wrap.className = "msg " + role;
+  // ── Dựng tin nhắn ───────────────────────────────────────────────
+  const scrollDown = () => { scroller.scrollTop = scroller.scrollHeight; };
+  const setEmpty = (empty) => app.classList.toggle("is-empty", empty);
+
+  function greet() {
+    const h = new Date().getHours();
+    const part = h < 5 ? "Khuya rồi" : h < 11 ? "Chào buổi sáng" : h < 13 ? "Chào buổi trưa" : h < 18 ? "Chào buổi chiều" : "Chào buổi tối";
+    const name = state.userId && !/^web-/.test(state.userId) ? `, ${state.userId}` : "";
+    $("greeting").textContent = part + name;
+  }
+
+  function addUser(text) {
+    setEmpty(false);
+    const row = document.createElement("div");
+    row.className = "msg-user";
     const bubble = document.createElement("div");
     bubble.className = "bubble";
-    bubble.innerHTML = render(text);
-    wrap.appendChild(bubble);
-    if (meta) {
-      const m = document.createElement("div");
-      m.className = "meta";
-      m.textContent = meta;
-      wrap.appendChild(m);
-    }
-    thread.appendChild(wrap);
+    bubble.textContent = text;
+    row.appendChild(bubble);
+    thread.appendChild(row);
     scrollDown();
-    return wrap;
+  }
+
+  function addAssistant(text, info) {
+    setEmpty(false);
+    const row = document.createElement("div");
+    row.className = "msg-ai";
+    row.innerHTML = `<div class="content">${renderMarkdown(text)}</div>`;
+    const actions = document.createElement("div");
+    actions.className = "actions";
+    const copy = document.createElement("button");
+    copy.className = "icon-btn";
+    copy.type = "button";
+    copy.title = "Sao chép";
+    copy.innerHTML = ICON_COPY;
+    copy.addEventListener("click", () => copyText(text, copy, ICON_COPY));
+    actions.appendChild(copy);
+    if (info) {
+      const meta = document.createElement("span");
+      meta.className = "meta";
+      meta.textContent = info;
+      actions.appendChild(meta);
+    }
+    row.appendChild(actions);
+    thread.appendChild(row);
+    scrollDown();
+  }
+
+  function addThinking() {
+    setEmpty(false);
+    const row = document.createElement("div");
+    row.className = "msg-ai";
+    row.innerHTML = '<div class="thinking" aria-label="Đang trả lời"><span></span><span></span><span></span></div>';
+    thread.appendChild(row);
+    scrollDown();
+    return row;
   }
 
   function addNotice(text) {
+    setEmpty(false);
     const n = document.createElement("div");
     n.className = "notice";
     n.textContent = text;
@@ -222,96 +565,130 @@
   }
 
   function clearThread() {
-    thread.querySelectorAll(".msg, .notice").forEach((el) => el.remove());
-    empty.hidden = false;
+    thread.replaceChildren();
+    setEmpty(true);
+    greet();
   }
+
+  async function copyText(text, button, icon) {
+    try {
+      await navigator.clipboard.writeText(text);
+      const old = button.innerHTML;
+      button.innerHTML = icon ? ICON_CHECK : "Đã chép";
+      setTimeout(() => { button.innerHTML = old; }, 1500);
+    } catch { /* clipboard bị chặn — bỏ qua */ }
+  }
+
+  thread.addEventListener("click", (e) => {
+    const btn = e.target.closest(".copy-code");
+    if (btn) copyText(btn.closest(".codeblock").querySelector("code").textContent, btn);
+  });
 
   function errorText(status, retryAfter) {
     switch (status) {
-      case 401: return "API key sai hoặc chưa nhập.";
-      case 402: return "Đã hết ngân sách tháng này của user.";
+      case 401: return "API key sai hoặc chưa nhập — mở Cài đặt để nhập lại.";
+      case 402: return "User này đã hết ngân sách tháng.";
       case 422: return "Câu hỏi không hợp lệ (rỗng hoặc quá 2000 ký tự).";
-      case 429: return `Gọi quá nhanh — thử lại sau ${retryAfter || 60} giây.`;
-      case 502: return "Nhà cung cấp LLM đang lỗi, thử lại sau.";
+      case 429: return `Bạn gửi hơi nhanh — thử lại sau ${retryAfter || 60} giây.`;
+      case 502: return "Nhà cung cấp LLM đang bận, thử lại sau ít phút.";
       case 503: return "Service đang khởi động lại, thử lại sau ít giây.";
-      default: return `Lỗi ${status}.`;
+      default: return `Có lỗi xảy ra (${status}).`;
     }
   }
 
+  const formatInfo = (d) =>
+    `${d.model || "mock"} · ${d.tokens.in}→${d.tokens.out} tokens · $${Number(d.cost_usd).toFixed(6)}`;
+
+  // ── Gọi API ─────────────────────────────────────────────────────
   async function loadHistory() {
     clearThread();
-    if (!apiKeyInput.value.trim()) return;
+    if (!state.apiKey) return;
     try {
       const res = await fetch("/history", { headers: headers() });
-      if (!res.ok) { if (res.status === 401) addNotice(errorText(401)); return; }
+      if (res.status === 401) { openSettings("API key không đúng."); return; }
+      if (!res.ok) return;
       const data = await res.json();
-      data.messages.forEach((m) => addMessage(m.role === "user" ? "user" : "assistant", m.content));
-    } catch { /* mạng lỗi — để trống */ }
+      data.messages.forEach((m) => (m.role === "user" ? addUser(m.content) : addAssistant(m.content)));
+    } catch { /* mạng lỗi — để màn hình trống */ }
   }
 
   async function ask(text) {
-    addMessage("user", text);
-    const typing = addMessage("assistant typing", "Đang trả lời…");
-    send.disabled = true;
+    addUser(text);
+    const thinking = addThinking();
+    state.busy = true;
+    updateSend();
     try {
-      const res = await fetch("/ask", {
-        method: "POST",
-        headers: headers(),
-        body: JSON.stringify({ question: text }),
-      });
-      typing.remove();
+      const res = await fetch("/ask", { method: "POST", headers: headers(), body: JSON.stringify({ question: text }) });
+      thinking.remove();
       if (!res.ok) {
         addNotice(errorText(res.status, res.headers.get("Retry-After")));
+        if (res.status === 401) openSettings("API key không đúng.");
         return;
       }
       const data = await res.json();
-      const cost = Number(data.cost_usd).toFixed(6);
-      addMessage("assistant", data.answer,
-        `${data.model || "mock"} · ${data.tokens.in}→${data.tokens.out} tokens · $${cost}`);
+      addAssistant(data.answer, formatInfo(data));
+      modelLabel.textContent = data.model || "";
     } catch {
-      typing.remove();
+      thinking.remove();
       addNotice("Không kết nối được tới service.");
     } finally {
-      send.disabled = false;
+      state.busy = false;
+      updateSend();
       question.focus();
     }
   }
 
+  // ── Ô nhập ──────────────────────────────────────────────────────
+  function updateSend() { send.disabled = state.busy || !question.value.trim(); }
+  function autosize() { question.style.height = "auto"; question.style.height = question.scrollHeight + "px"; }
+
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     const text = question.value.trim();
-    if (!text || send.disabled) return;
-    if (!apiKeyInput.value.trim()) { addNotice(errorText(401)); apiKeyInput.focus(); return; }
+    if (!text || state.busy) return;
+    if (!state.apiKey) { openSettings("Nhập API key trước khi hỏi."); return; }
     question.value = "";
-    question.style.height = "auto";
+    autosize();
     ask(text);
   });
-
   question.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
-      e.preventDefault();
-      form.requestSubmit();
-    }
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); form.requestSubmit(); }
   });
+  question.addEventListener("input", () => { autosize(); updateSend(); });
 
-  question.addEventListener("input", () => {
-    question.style.height = "auto";
-    question.style.height = question.scrollHeight + "px";
+  // ── Cài đặt & cuộc trò chuyện mới ───────────────────────────────
+  function openSettings(error) {
+    apiKeyInput.value = state.apiKey;
+    userInput.value = state.userId;
+    settingsError.hidden = !error;
+    settingsError.textContent = error || "";
+    if (!dialog.open) dialog.showModal();
+    (state.apiKey ? userInput : apiKeyInput).focus();
+  }
+  $("openSettings").addEventListener("click", () => openSettings());
+  dialog.addEventListener("close", () => {
+    if (dialog.returnValue !== "save") return;
+    state.apiKey = apiKeyInput.value.trim();
+    state.userId = userInput.value.trim() || state.userId;
+    saved.set("day12.apiKey", state.apiKey);
+    saved.set("day12.userId", state.userId);
+    loadHistory();
   });
-
-  apiKeyInput.addEventListener("change", () => { store.set("day12.apiKey", apiKeyInput.value.trim()); loadHistory(); });
-  userInput.addEventListener("change", () => { store.set("day12.userId", userInput.value.trim()); loadHistory(); });
 
   $("newChat").addEventListener("click", async () => {
-    if (!apiKeyInput.value.trim()) { clearThread(); return; }
-    try {
-      const res = await fetch("/history", { method: "DELETE", headers: headers() });
-      if (!res.ok) { addNotice(errorText(res.status)); return; }
-      clearThread();
-    } catch { addNotice("Không kết nối được tới service."); }
+    if (state.apiKey) {
+      try {
+        const res = await fetch("/history", { method: "DELETE", headers: headers() });
+        if (!res.ok) { addNotice(errorText(res.status)); return; }
+      } catch { addNotice("Không kết nối được tới service."); return; }
+    }
+    modelLabel.textContent = "";
+    clearThread();
+    question.focus();
   });
 
-  loadHistory();
+  greet();
+  if (state.apiKey) loadHistory(); else openSettings();
   question.focus();
 })();
 </script>
