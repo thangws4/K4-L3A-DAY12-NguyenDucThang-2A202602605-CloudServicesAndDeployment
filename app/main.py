@@ -15,23 +15,24 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from functools import lru_cache
+from pathlib import Path
 
 from fastapi import Depends, FastAPI
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
-
-from utils.mock_llm import ask_llm
 
 from .auth import verify_api_key
 from .config import get_settings
 from .cost_guard import CostGuard
 from .lifecycle import lifecycle
+from .llm import ask_llm
 from .logging_utils import log_event
 from .rate_limiter import RateLimiter
 from .store import ConversationStore, get_redis_client
 
 SERVICE_NAME = "day12-agent"
 SERVICE_VERSION = "1.0.0"
+CHAT_PAGE = Path(__file__).parent / "static" / "chat.html"
 
 
 # ─────────────────────────────────────────────────────────────
@@ -68,6 +69,15 @@ app = FastAPI(title="Day 12 Production Agent", version=SERVICE_VERSION, lifespan
 
 class AskRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
+
+
+# ─────────────────────────────────────────────────────────────
+# Giao diện chat — trang tĩnh, không chứa secret; API key do người dùng
+# nhập trên trình duyệt và gửi kèm mỗi request tới /ask.
+# ─────────────────────────────────────────────────────────────
+@app.get("/", include_in_schema=False)
+def chat_page():
+    return FileResponse(CHAT_PAGE, media_type="text/html")
 
 
 # ─────────────────────────────────────────────────────────────
@@ -168,6 +178,7 @@ def ask(
         tokens_in=result["tokens_in"],
         tokens_out=result["tokens_out"],
         cost_usd=result["cost_usd"],
+        model=result.get("model", "mock"),
     )
     return {
         "answer": result["answer"],
@@ -175,7 +186,28 @@ def ask(
         "history_length": len(history),
         "cost_usd": result["cost_usd"],
         "tokens": {"in": result["tokens_in"], "out": result["tokens_out"]},
+        "model": result.get("model", "mock"),
     }
+
+
+@app.get("/history")
+def get_history(
+    user_id: str = Depends(verify_api_key),
+    store: ConversationStore = Depends(get_store),
+):
+    """Lịch sử hội thoại của user — trang chat tải lại khi refresh."""
+    return {"user_id": user_id, "messages": store.get_history(user_id)}
+
+
+@app.delete("/history")
+def clear_history(
+    user_id: str = Depends(verify_api_key),
+    store: ConversationStore = Depends(get_store),
+):
+    """Xóa lịch sử hội thoại của user — nút "Cuộc trò chuyện mới" trên trang chat."""
+    store.clear(user_id)
+    log_event("history_cleared", user_id=user_id)
+    return {"user_id": user_id, "cleared": True}
 
 
 if __name__ == "__main__":

@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Day 12 Chat</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --text: #1c1f24;
+    --muted: #6b7280;
+    --border: #e3e6ea;
+    --accent: #2563eb;
+    --accent-text: #ffffff;
+    --user-bg: #2563eb;
+    --user-text: #ffffff;
+    --bot-bg: #ffffff;
+    --code-bg: #f1f3f5;
+    --error-bg: #fef2f2;
+    --error-text: #b91c1c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111316;
+      --panel: #1a1d21;
+      --text: #e7e9ec;
+      --muted: #9aa1ab;
+      --border: #2b2f35;
+      --accent: #3b82f6;
+      --user-bg: #2f5fd0;
+      --bot-bg: #1f2328;
+      --code-bg: #262a30;
+      --error-bg: #2a1718;
+      --error-text: #fca5a5;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    align-items: center;
+  }
+  header h1 { font-size: 16px; margin: 0 auto 0 0; }
+  header label { font-size: 13px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  header input {
+    font: inherit; font-size: 13px;
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    width: 160px;
+  }
+  button {
+    font: inherit; font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    cursor: pointer;
+  }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+  }
+  .thread { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+  .msg { display: flex; flex-direction: column; max-width: 85%; }
+  .msg.user { align-self: flex-end; align-items: flex-end; }
+  .msg.assistant { align-self: flex-start; }
+  .bubble {
+    padding: 9px 13px;
+    border-radius: 12px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .user .bubble { background: var(--user-bg); color: var(--user-text); border-bottom-right-radius: 4px; }
+  .assistant .bubble { background: var(--bot-bg); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+  .bubble pre { background: var(--code-bg); padding: 8px 10px; border-radius: 6px; overflow-x: auto; white-space: pre; margin: 6px 0; }
+  .bubble code { background: var(--code-bg); padding: 1px 4px; border-radius: 4px; font-size: 13px; }
+  .bubble pre code { background: none; padding: 0; }
+  .meta { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+  .notice {
+    align-self: center;
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: var(--error-bg);
+    color: var(--error-text);
+  }
+  .empty { text-align: center; color: var(--muted); margin-top: 18vh; }
+  .typing .bubble { color: var(--muted); }
+  footer {
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    padding: 10px 16px;
+  }
+  form { max-width: 760px; margin: 0 auto; display: flex; gap: 8px; align-items: flex-end; }
+  textarea {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    resize: none;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--text);
+    max-height: 160px;
+  }
+  textarea:focus, header input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  @media (max-width: 560px) {
+    header h1 { flex-basis: 100%; }
+    header label { flex: 1 1 0; min-width: 0; }
+    header input { width: 100%; min-width: 0; }
+    .msg { max-width: 95%; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Day 12 Chat</h1>
+  <label>API key <input id="apiKey" type="password" autocomplete="off" placeholder="X-API-Key"></label>
+  <label>User <input id="userId" autocomplete="off"></label>
+  <button id="newChat" type="button">Cuộc trò chuyện mới</button>
+</header>
+
+<main id="scroller">
+  <div class="thread" id="thread">
+    <p class="empty" id="empty">Nhập API key của service rồi bắt đầu hỏi.</p>
+  </div>
+</main>
+
+<footer>
+  <form id="form">
+    <textarea id="question" rows="1" maxlength="2000" placeholder="Nhập câu hỏi…" title="Enter để gửi, Shift+Enter xuống dòng"></textarea>
+    <button class="primary" id="send" type="submit">Gửi</button>
+  </form>
+</footer>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const thread = $("thread"), scroller = $("scroller"), empty = $("empty");
+  const apiKeyInput = $("apiKey"), userInput = $("userId");
+  const form = $("form"), question = $("question"), send = $("send");
+
+  // localStorage chỉ để tiện cho người xem trên máy này; lỗi thì bỏ qua.
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  };
+
+  apiKeyInput.value = store.get("day12.apiKey") || "";
+  userInput.value = store.get("day12.userId") || "web-" + Math.random().toString(36).slice(2, 8);
+  store.set("day12.userId", userInput.value);
+
+  const headers = () => ({
+    "Content-Type": "application/json",
+    "X-API-Key": apiKeyInput.value.trim(),
+    "X-User-Id": userInput.value.trim() || "anonymous",
+  });
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  // Markdown tối giản: code block, inline code, in đậm. Escape trước để an toàn.
+  function render(text) {
+    const parts = escapeHtml(text).split(/```(?:[\w-]*)\n?([\s\S]*?)```/g);
+    return parts.map((part, i) => {
+      if (i % 2 === 1) return "<pre><code>" + part.replace(/\n$/, "") + "</code></pre>";
+      return part
+        .replace(/`([^`\n]+)`/g, "<code>$1</code>")
+        .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
+    }).join("");
+  }
+
+  function scrollDown() { scroller.scrollTop = scroller.scrollHeight; }
+
+  function addMessage(role, text, meta) {
+    empty.hidden = true;
+    const wrap = document.createElement("div");
+    wrap.className = "msg " + role;
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.innerHTML = render(text);
+    wrap.appendChild(bubble);
+    if (meta) {
+      const m = document.createElement("div");
+      m.className = "meta";
+      m.textContent = meta;
+      wrap.appendChild(m);
+    }
+    thread.appendChild(wrap);
+    scrollDown();
+    return wrap;
+  }
+
+  function addNotice(text) {
+    const n = document.createElement("div");
+    n.className = "notice";
+    n.textContent = text;
+    thread.appendChild(n);
+    scrollDown();
+  }
+
+  function clearThread() {
+    thread.querySelectorAll(".msg, .notice").forEach((el) => el.remove());
+    empty.hidden = false;
+  }
+
+  function errorText(status, retryAfter) {
+    switch (status) {
+      case 401: return "API key sai hoặc chưa nhập.";
+      case 402: return "Đã hết ngân sách tháng này của user.";
+      case 422: return "Câu hỏi không hợp lệ (rỗng hoặc quá 2000 ký tự).";
+      case 429: return `Gọi quá nhanh — thử lại sau ${retryAfter || 60} giây.`;
+      case 502: return "Nhà cung cấp LLM đang lỗi, thử lại sau.";
+      case 503: return "Service đang khởi động lại, thử lại sau ít giây.";
+      default: return `Lỗi ${status}.`;
+    }
+  }
+
+  async function loadHistory() {
+    clearThread();
+    if (!apiKeyInput.value.trim()) return;
+    try {
+      const res = await fetch("/history", { headers: headers() });
+      if (!res.ok) { if (res.status === 401) addNotice(errorText(401)); return; }
+      const data = await res.json();
+      data.messages.forEach((m) => addMessage(m.role === "user" ? "user" : "assistant", m.content));
+    } catch { /* mạng lỗi — để trống */ }
+  }
+
+  async function ask(text) {
+    addMessage("user", text);
+    const typing = addMessage("assistant typing", "Đang trả lời…");
+    send.disabled = true;
+    try {
+      const res = await fetch("/ask", {
+        method: "POST",
+        headers: headers(),
+        body: JSON.stringify({ question: text }),
+      });
+      typing.remove();
+      if (!res.ok) {
+        addNotice(errorText(res.status, res.headers.get("Retry-After")));
+        return;
+      }
+      const data = await res.json();
+      const cost = Number(data.cost_usd).toFixed(6);
+      addMessage("assistant", data.answer,
+        `${data.model || "mock"} · ${data.tokens.in}→${data.tokens.out} tokens · $${cost}`);
+    } catch {
+      typing.remove();
+      addNotice("Không kết nối được tới service.");
+    } finally {
+      send.disabled = false;
+      question.focus();
+    }
+  }
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const text = question.value.trim();
+    if (!text || send.disabled) return;
+    if (!apiKeyInput.value.trim()) { addNotice(errorText(401)); apiKeyInput.focus(); return; }
+    question.value = "";
+    question.style.height = "auto";
+    ask(text);
+  });
+
+  question.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+
+  question.addEventListener("input", () => {
+    question.style.height = "auto";
+    question.style.height = question.scrollHeight + "px";
+  });
+
+  apiKeyInput.addEventListener("change", () => { store.set("day12.apiKey", apiKeyInput.value.trim()); loadHistory(); });
+  userInput.addEventListener("change", () => { store.set("day12.userId", userInput.value.trim()); loadHistory(); });
+
+  $("newChat").addEventListener("click", async () => {
+    if (!apiKeyInput.value.trim()) { clearThread(); return; }
+    try {
+      const res = await fetch("/history", { method: "DELETE", headers: headers() });
+      if (!res.ok) { addNotice(errorText(res.status)); return; }
+      clearThread();
+    } catch { addNotice("Không kết nối được tới service."); }
+  });
+
+  loadHistory();
+  question.focus();
+})();
+</script>
+</body>
+</html>

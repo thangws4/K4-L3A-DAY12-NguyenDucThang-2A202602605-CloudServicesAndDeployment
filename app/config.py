@@ -47,6 +47,13 @@ class Settings(BaseSettings):
     monthly_budget_usd: float = 10.0
     log_level: str = "INFO"
 
+    # LLM thật qua OpenRouter. Không set key → dùng mock LLM (offline, miễn phí),
+    # nên test và máy chưa có key vẫn chạy được.
+    openrouter_api_key: str | None = None
+    openrouter_model: str = "openai/gpt-4o-mini"
+    llm_max_tokens: int = 800
+    llm_timeout_seconds: float = 30.0
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

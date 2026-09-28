@@ -48,6 +48,9 @@ services:
       RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-10}
       MONTHLY_BUDGET_USD: ${MONTHLY_BUDGET_USD:-10.0}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      # Để trống → mock LLM
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-4o-mini}
     depends_on:
       redis:
         condition: service_healthy
