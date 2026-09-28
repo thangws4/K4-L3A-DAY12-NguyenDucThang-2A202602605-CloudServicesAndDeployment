@@ -1,3 +1,5 @@
+[![CI](https://github.com/thangws4/K4-L3A-DAY12-NguyenDucThang-2A202602605-CloudServicesAndDeployment/actions/workflows/ci.yml/badge.svg)](https://github.com/thangws4/K4-L3A-DAY12-NguyenDucThang-2A202602605-CloudServicesAndDeployment/actions/workflows/ci.yml)
+
 # K4 — Level 3A, Ngày 12: Hạ Tầng Cloud & Deployment (240 phút)
 
 Đưa một AI agent từ `localhost:8000` lên một địa chỉ công khai mà người khác
